@@ -8,9 +8,10 @@ import matplotlib.pyplot as plt
 
 class ValueIteration():
     def __init__(self):
-        self.gamma = .25
+        self.gamma = .9
         self.theta = .0001 # Stopping condition for policy evaluation
         self.value_grid = [[0 for _ in range(5)] for _ in range(5)] # matrix of state-value functions
+        self.value_grid_new = [[0 for _ in range(5)] for _ in range(5)] # matrix of state-value functions
         self.possible_states = [(i, j) for i in range(5) for j in range(5)]
         self.env = GridWorld()
         # Initialize an empty dictionary
@@ -28,26 +29,21 @@ class ValueIteration():
             'RIGHT']
 
     def value_iter(self):
-        optimal = False
-        iterations = 0
-        while not optimal:
-            print(iterations)
-            iterations += 1
-            self.policy_eval()
-            optimal = self.policy_improv()
-    
-    def policy_eval(self):
         # Reset value functions
         self.value_grid = [[0 for _ in range(5)] for _ in range(5)]
+        self.value_grid_new = [[0 for _ in range(5)] for _ in range(5)]
         # Adding arbitrary constant to enter while loop
+        iterations = 0
         Delta = self.theta + 1
         while Delta > self.theta:
+            print(iterations)
+            iterations += 1
             Delta = 0
             # Loop through all possible state locations
             for state in self.possible_states:
                 # Get current state-value
                 v = self.value_grid[state[0]][state[1]]
-                v_update = 0
+                action_values = []
                 for action in self.actions:
                     transition_loop = 0
                     for next_state in self.possible_states:
@@ -59,24 +55,15 @@ class ValueIteration():
                             reward = self.env.reward(next_state)
                             next_value = self.value_grid[next_state[0]][next_state[1]]
                         transition_loop += self.env.transition_prob(state, action, next_state) * (reward + self.gamma * next_value)
-                    v_update += self.policy_prob(state, action) * transition_loop
-                self.value_grid[state[0]][state[1]] = v_update
-                Delta = max(Delta, abs(v - v_update))
+                    action_value = transition_loop
+                    action_values.append(action_value)
+                max_value = max(action_values)
+                self.value_grid_new[state[0]][state[1]] = max_value
+                Delta = max(Delta, abs(v - max_value))
+            self.value_grid = self.value_grid_new
 
-    def policy_improv(self) -> bool:
-        equal_policies = True
-        # Loop through all possible state locations
         for state in self.possible_states:
-            prev_policy = self.policy[state]
             self.policy[state] = self.argmax_action(state)
-            if self.policy[state] != prev_policy:
-                equal_policies = False
-        return equal_policies
-        
-    def policy_prob(self, state: tuple, action: str):
-        if action != self.policy.get(state):
-            return 0
-        return 1
     
     def argmax_action(self, state):
         action_values = {}

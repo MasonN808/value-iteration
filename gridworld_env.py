@@ -87,17 +87,3 @@ class GridWorld():
             prob += self.dynamics['none']
     
         return prob
-
-    # def _done(self):
-    #     if self.current_state == self.goal_state:
-    #         self.done = True
-    #         return True
-    #     return False
-    
-    # def step(self, action: str):
-    #     obs = self._next_obs(action, self.obs)
-    #     reward = self._reward()
-    #     done = self._done()
-    #     self.steps += 1
-    #     return obs, reward, done
-
