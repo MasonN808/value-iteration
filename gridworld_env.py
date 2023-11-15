@@ -8,15 +8,13 @@ class GridWorld():
         # (x-axis, y-axis)
         self.start_state = (0,0) # Top left corner
         self.current_state = self.start_state
-        self.goal_state = (4, 4)  # Bottom right corner
+        self.goal_state = [(4, 4)]  # Bottom right corner
         self.grid = [[0 for _ in range(5)] for _ in range(5)]  # Initialize gridworld
 
-        # Define obstacles
-        self.obstacles = [(2, 2), (3, 2)]  # List of coordinates for obstacles
-        self.water = [(4, 2)]  # List of coordinates for water
-
-        self.steps = 0 # Actions performed
-        self.done = False # Terminal state reached
+        # Define obstacles and landmarks
+        self.obstacles = [(2, 2), (3, 2)]
+        self.water = [(4, 2)]
+        self.gold = [(0, 2)]
 
         # Define action outcomes
         self.actions = {
@@ -33,27 +31,13 @@ class GridWorld():
             'none': 0.1
         }
 
-
-    def reset(self):
-        # (x-axis, y-axis)
-        self.start_state = (0,0) # Top left corner
-        self.current_state = self.start_state
-        self.goal_state = (4, 4)  # Bottom right corner
-        self.grid = [[0 for _ in range(5)] for _ in range(5)]  # Initialize grid
-
-        # Define obstacles
-        self.obstacles = [(2, 2), (3, 2)]  # List of coordinates for obstacles
-        self.water = [(4, 2)]  # List of coordinates for water
-
-        self.steps = 0 # Actions performed
-        self.done = False # Terminal state reached
-
-    
     def reward(self, next_state: tuple):
         if next_state in self.water:
             return -10
-        if next_state == self.goal_state:
+        if next_state in self.goal_state:
             return 10
+        if next_state in self.gold:
+            return 5
         return 0
     
     def transition_prob(self, current_state: tuple, action: str, next_state: tuple):
