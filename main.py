@@ -1,3 +1,4 @@
+import copy
 import json
 import pickle
 
@@ -36,6 +37,7 @@ class ValueIteration():
         iterations = 0
         Delta = self.theta + 1
         while Delta > self.theta:
+            # self.visualize_vf()
             print(iterations)
             iterations += 1
             Delta = 0
@@ -48,18 +50,21 @@ class ValueIteration():
                     transition_loop = 0
                     for next_state in self.possible_states:
                         # Ensure that any transistion from the goal state results in 0 reward
-                        if state == self.env.goal_state:
+                        if state in self.env.goal_state or next_state in self.env.obstacles or state in self.env.obstacles:
                             reward = 0
                             next_value = 0
                         else:
                             reward = self.env.reward(next_state)
                             next_value = self.value_grid[next_state[0]][next_state[1]]
                         transition_loop += self.env.transition_prob(state, action, next_state) * (reward + self.gamma * next_value)
+                        # if state == (4, 1) and next_state == (4, 2):
+                            # print(self.env.transition_prob(state, action, next_state))
                     action_value = transition_loop
                     action_values.append(action_value)
                 max_value = max(action_values)
                 self.value_grid_new[state[0]][state[1]] = max_value
                 Delta = max(Delta, abs(v - max_value))
+            # self.value_grid = copy.deepcopy(self.value_grid_new)
             self.value_grid = self.value_grid_new
 
         for state in self.possible_states:
@@ -71,7 +76,7 @@ class ValueIteration():
             transition_loop = 0
             for next_state in self.possible_states:
                 # Ensure that any transistion from the goal state results in 0 reward
-                if state == self.env.goal_state:
+                if state in self.env.goal_state or next_state in self.env.obstacles or state in self.env.obstacles:
                     reward = 0
                     next_value = 0
                 else:
@@ -84,6 +89,8 @@ class ValueIteration():
 
         # Find the action with the maximum expected return
         best_action = max(action_values, key=action_values.get)
+        # if state in self.env.gold:
+        #     print(action_values)
         return best_action
     
     def visualize_vf(self):
@@ -128,7 +135,7 @@ class ValueIteration():
         for state, action in self.policy.items():
             # Starting point of the arrow
             start_point = (state[1] + 0.5, 4.5 - state[0])
-            if state == self.env.goal_state:
+            if state in self.env.goal_state:
                 ax.text(state[1] + 0.5, 4.5 - state[0], 'G', ha="center", va="center", fontsize=12)
                 continue
 
