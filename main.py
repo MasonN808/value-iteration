@@ -1,21 +1,21 @@
 import copy
 import json
 import pickle
+import random
 
 from gridworld_env import GridWorld
 import numpy as np
 import math
 import matplotlib.pyplot as plt
 
-class ValueIteration():
+class ModelFree():
     def __init__(self):
         self.gamma = .9
         self.theta = .0001 # Stopping condition for policy evaluation
         self.value_grid = [[0 for _ in range(5)] for _ in range(5)] # matrix of state-value functions
         self.value_grid_new = [[0 for _ in range(5)] for _ in range(5)] # matrix of state-value functions
-        self.possible_states = [(i, j) for i in range(5) for j in range(5)]
         self.env = GridWorld()
-        # Initialize an empty dictionary
+        self.possible_states = [(i, j) for i in range(5) for j in range(5) if (i, j) not in self.env.obstacles]
         self.policy = {}
         # Use a for loop to generate keys and assign the default value "RIGHT" to each key
         for i in range(5):
@@ -64,11 +64,12 @@ class ValueIteration():
                 max_value = max(action_values)
                 self.value_grid_new[state[0]][state[1]] = max_value
                 Delta = max(Delta, abs(v - max_value))
-            # self.value_grid = copy.deepcopy(self.value_grid_new)
             self.value_grid = self.value_grid_new
 
         for state in self.possible_states:
             self.policy[state] = self.argmax_action(state)
+        
+        return self.policy, self.value_grid
     
     def argmax_action(self, state):
         action_values = {}
@@ -93,9 +94,56 @@ class ValueIteration():
         #     print(action_values)
         return best_action
     
+    def td_learning(self, policy: dict, alpha: float, delta: float, gamma: float, num_iter: int):
+        # Reset value functions
+        self.value_grid = [[0 for _ in range(5)] for _ in range(5)]
+        self.value_grid_new = [[0 for _ in range(5)] for _ in range(5)]
+        self.average_value_grid = [[0 for _ in range(5)] for _ in range(5)]
+        assert delta > 0, "delta should be greater than 0'"
+        episodes = []
+        for n in range(0, num_iter):
+            max_norm = delta + .001
+            episode_num = 0
+            while max_norm > delta:
+                max_norm = 0
+                episode_num +=1
+                # Initialize start state
+                state = random.choice(self.possible_states)
+                # Generate a trajectory using the policy
+                while state not in self.env.goal_state:
+                    # Get current state-value
+                    action = policy[state]
+                    reward, next_state = self.env.step(state, action)
+                    v_prev = self.value_grid[state[0]][state[1]]
+                    v_next = self.value_grid[next_state[0]][next_state[1]]
+                    v = v_prev + alpha*(reward + gamma*v_next - v_prev)
+                    if max_norm < abs(v - v_prev):
+                        max_norm = abs(v - v_prev)
+                    self.value_grid_new[state[0]][state[1]] = v
+                    state = next_state
+                self.value_grid = self.value_grid_new
+            
+            episodes.append(episode_num)
+            for state in self.possible_states:
+                self.average_value_grid[state[0]][state[1]] += self.value_grid[state[0]][state[1]]
+
+        for state in self.possible_states:
+                self.average_value_grid[state[0]][state[1]] /= n
+
+        return self.average_value_grid, episodes
     
-    
-    def visualize_vf(self):
+    def calculate_max_norm(self, vf1, vf2): 
+        max_norm = 0
+        for state in self.possible_states:
+            norm = abs(vf1[state[0]][state[1]] - vf2[state[0]][state[1]])
+            if max_norm < norm:
+                max_norm = norm
+        return max_norm
+
+    def visualize_vf(self, value_grid=None):
+        if not value_grid:
+            value_grid = self.value_grid
+
         # Set up the figure
         _, ax = plt.subplots(figsize=(8, 8))
 
@@ -114,7 +162,7 @@ class ValueIteration():
         # Add values
         for i in range(5):
             for j in range(5):
-                ax.text(j + 0.5, 4.5 - i, f'{self.value_grid[i][j]:.4f}', ha="center", va="center")
+                ax.text(j + 0.5, 4.5 - i, f'{value_grid[i][j]:.4f}', ha="center", va="center")
 
         # Show the plot
         plt.show()
@@ -159,7 +207,10 @@ class ValueIteration():
 
 
 if __name__ == "__main__":
-    vi = ValueIteration()
-    vi.value_iter()
-    vi.visualize_policy()
-    vi.visualize_vf()
+    mf = ModelFree()
+    optimal_policy, optimal_value_grid = mf.value_iter()
+    averaged_value_grid, episodes = mf.td_learning(policy=optimal_policy, alpha=.35, delta=.0001, gamma=.9, num_iter=50)
+    print(mf.calculate_max_norm(averaged_value_grid, optimal_value_grid))
+    print(np.mean(episodes))
+    print(np.std(episodes))
+    mf.visualize_vf(value_grid=averaged_value_grid)

@@ -30,6 +30,39 @@ class GridWorld():
             'none': 0.1
         }
 
+    def step(self, current_state: tuple, action: str):
+        # Calculate the resulting state for each possible action outcome
+        right_transformation = {
+            'UP': 'RIGHT',
+            'DOWN': 'LEFT',
+            'LEFT': 'UP',
+            'RIGHT': 'DOWN'
+        }
+        left_transformation = {
+            'UP': 'LEFT',
+            'DOWN': 'RIGHT',
+            'LEFT': 'DOWN',
+            'RIGHT': 'UP'
+        }
+        intended_result = (current_state[0] + self.actions[action][0], current_state[1] + self.actions[action][1])
+        right_result = (current_state[0] + self.actions[right_transformation.get(action)][0], current_state[1] + self.actions[right_transformation.get(action)][1])
+        left_result = (current_state[0] + self.actions[left_transformation.get(action)][0], current_state[1] + self.actions[left_transformation.get(action)][1])
+        no_move_result = current_state
+        
+        # Check boundaries and obstacles
+        if not (0 <= intended_result[0] < 5 and 0 <= intended_result[1] < 5) or intended_result in self.obstacles:
+            intended_result = current_state
+        if not (0 <= right_result[0] < 5 and 0 <= right_result[1] < 5) or right_result in self.obstacles:
+            right_result = current_state
+        if not (0 <= left_result[0] < 5 and 0 <= left_result[1] < 5) or left_result in self.obstacles:
+            left_result = current_state
+
+        next_states = [intended_result, right_result, left_result, no_move_result]
+        probabilities = [.8, .05, .05, .1]
+        # Pull a random element according to the probability distribution of the dynamics
+        next_state = random.choices(next_states, probabilities, k=1)[0]
+        return self.reward(next_state), next_state
+
     def reward(self, next_state: tuple):
         if next_state in self.water:
             return -10
