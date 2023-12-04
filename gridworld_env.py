@@ -7,7 +7,6 @@ class GridWorld():
     def __init__(self):
         # (x-axis, y-axis)
         self.start_state = (0, 0) # Top left corner
-        self.current_state = self.start_state
         self.goal_state = [(4, 4)]  # Bottom right corner
         self.grid = [[0 for _ in range(5)] for _ in range(5)]  # Initialize gridworld
 
@@ -16,10 +15,10 @@ class GridWorld():
         self.water = [(4, 2)]
         self.gold = []
 
-        # Define action outcomes
+        # Define action outcomes; Positioning -> (y, x)
         self.actions = {
-            'UP': (-1, 0),
-            'DOWN': (1, 0),
+            'UP': (1, 0),
+            'DOWN': (-1, 0),
             'LEFT': (0, -1),
             'RIGHT': (0, 1)
         }
@@ -46,9 +45,21 @@ class GridWorld():
             return 0
         
         # Calculate the resulting state for each possible action outcome
+        right_transformation = {
+            'UP': 'RIGHT',
+            'DOWN': 'LEFT',
+            'LEFT': 'UP',
+            'RIGHT': 'DOWN'
+        }
+        left_transformation = {
+            'UP': 'LEFT',
+            'DOWN': 'RIGHT',
+            'LEFT': 'DOWN',
+            'RIGHT': 'UP'
+        }
         intended_result = (current_state[0] + self.actions[action][0], current_state[1] + self.actions[action][1])
-        right_result = (current_state[0] + self.actions['RIGHT'][0], current_state[1] + self.actions['RIGHT'][1])
-        left_result = (current_state[0] + self.actions['LEFT'][0], current_state[1] + self.actions['LEFT'][1])
+        right_result = (current_state[0] + self.actions[right_transformation.get(action)][0], current_state[1] + self.actions[right_transformation.get(action)][1])
+        left_result = (current_state[0] + self.actions[left_transformation.get(action)][0], current_state[1] + self.actions[left_transformation.get(action)][1])
         no_move_result = current_state
         
         # Check boundaries and obstacles

@@ -93,6 +93,8 @@ class ValueIteration():
         #     print(action_values)
         return best_action
     
+    
+    
     def visualize_vf(self):
         # Set up the figure
         _, ax = plt.subplots(figsize=(8, 8))
@@ -141,9 +143,9 @@ class ValueIteration():
 
             # Direction of the arrow
             if action == 'UP':
-                dx, dy = 0, 0.4
-            elif action == 'DOWN':
                 dx, dy = 0, -0.4
+            elif action == 'DOWN':
+                dx, dy = 0, 0.4
             elif action == 'LEFT':
                 dx, dy = -0.4, 0
             elif action == 'RIGHT':
