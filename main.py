@@ -144,7 +144,7 @@ class ModelFree():
         for i in range(5):
             for j in range(5):
                 for action in self.actions:
-                    q_values[((i, j), action)] = 0
+                    q_values[((i, j), action)] = 1
         num_actions = 0
         for _ in range(0, episodes):
             state = self.env.start_state
@@ -161,17 +161,58 @@ class ModelFree():
                 action = next_action
 
             # Calculate mean square error
-            error_squared_list = []
-            for state in self.possible_states:
-                value_function = sum([self.epsilon_greedy_policy_prob(state, action, epsilon, q_values)*q_values[((state[0], state[1]), action)] for action in self.actions])
-                value_grid[state[0]][state[1]] = value_function
-                optimal_value_funtion = optimal_value_grid[state[0]][state[1]]
-                error_squared_list.append((value_function - optimal_value_funtion)**2)
-            mean_sqr_error = sum(error_squared_list)/len(self.possible_states)
+            if optimal_value_grid:
+                error_squared_list = []
+                for state in self.possible_states:
+                    value_function = sum([self.epsilon_greedy_policy_prob(state, action, epsilon, q_values)*q_values[((state[0], state[1]), action)] for action in self.actions])
+                    # value_grid[state[0]][state[1]] = value_function
+                    value_grid[state[0]][state[1]] = max([q_values[((state[0], state[1]), action)] for action in self.actions])
+                    optimal_value_funtion = optimal_value_grid[state[0]][state[1]]
+                    error_squared_list.append((value_function - optimal_value_funtion)**2)
+                mean_sqr_error = sum(error_squared_list)/len(self.possible_states)
+                mean_sqr_error_per_episode.append(mean_sqr_error)
 
             num_actions_per_episode.append(num_actions)
-            mean_sqr_error_per_episode.append(mean_sqr_error)
-        return num_actions_per_episode, mean_sqr_error_per_episode, value_grid, policy
+        return num_actions_per_episode, mean_sqr_error_per_episode, value_grid
+    
+    def q_learning(self, alpha: float, gamma: float, epsilon: float, episodes: int, optimal_value_grid=None):
+        value_grid = [[0 for _ in range(5)] for _ in range(5)]
+        policy = {}
+        num_actions_per_episode = []
+        mean_sqr_error_per_episode = []
+        # Reset Q-function
+        q_values = {}
+        for i in range(5):
+            for j in range(5):
+                for action in self.actions:
+                    q_values[((i, j), action)] = 1
+        num_actions = 0
+        for i in range(0, episodes):
+            state = self.env.start_state
+            # Repeat for each step of episode
+            print(i)
+            while state not in self.env.goal_state:
+                action = self.epsilon_greedy_policy(state=state, epsilon=epsilon, q_values=q_values)
+                num_actions += 1
+                reward, next_state = self.env.step(state, action)
+                q_value = q_values[((state[0], state[1]), action)]
+                q_value_max = max([q_values[((next_state[0], next_state[1]), action)] for action in self.actions])
+                q_values[((state[0], state[1]), action)] = q_value + alpha * (reward + gamma*q_value_max - q_value)
+                state = next_state
+
+            # Calculate mean square error
+            if optimal_value_grid:
+                error_squared_list = []
+                for state in self.possible_states:
+                    value_function = sum([self.epsilon_greedy_policy_prob(state, action, epsilon, q_values)*q_values[((state[0], state[1]), action)] for action in self.actions])
+                    value_grid[state[0]][state[1]] = max([q_values[((state[0], state[1]), action)] for action in self.actions])
+                    optimal_value_funtion = optimal_value_grid[state[0]][state[1]]
+                    error_squared_list.append((value_function - optimal_value_funtion)**2)
+                mean_sqr_error = sum(error_squared_list)/len(self.possible_states)
+                mean_sqr_error_per_episode.append(mean_sqr_error)
+
+            num_actions_per_episode.append(num_actions)
+        return num_actions_per_episode, mean_sqr_error_per_episode, value_grid
 
     def epsilon_greedy_policy(self, state: tuple, epsilon: float, q_values: dict):
         action_values = self.get_values_for_key_prefix(dictionary=q_values, key_prefix=state)
@@ -283,9 +324,9 @@ if __name__ == "__main__":
     # num_iter = 20
     # alpha = .5
     # epsilon = .01
-    # num_actions_agg = mf.sarsa(alpha=alpha, gamma=.9, epsilon=epsilon, episodes=170)
+    # num_actions_agg, _, _ = mf.sarsa(alpha=alpha, gamma=.9, epsilon=epsilon, episodes=170)
     # for _ in range(num_iter-1):
-    #     num_actions = mf.sarsa(alpha=alpha, gamma=.9, epsilon=epsilon, episodes=170)
+    #     num_actions, _, _ = mf.sarsa(alpha=alpha, gamma=.9, epsilon=epsilon, episodes=170)
     #     num_actions_agg = [sum(x) for x in zip(num_actions, num_actions_agg)]
     # num_actions_agg = [x / num_iter for x in num_actions_agg]
 
@@ -306,7 +347,7 @@ if __name__ == "__main__":
     # plt.grid(True)
     # plt.show()
 
-    # SARSA Q2b)
+    # SARSA Q2b) and 2c)
     mf = ModelFree()
     # Get optimal value function for error logs
     _, optimal_value_grid = mf.value_iter()
@@ -346,7 +387,76 @@ if __name__ == "__main__":
     plt.xlabel('Episodes')
     plt.ylabel('Mean Squared-Error')
     plt.yticks(range(0, int(max(mean_sqr_error_agg)), 2))
-    # plt.xticks(rotation=45)
     plt.grid(True)
     plt.show()
+
+    # Q-Learning Q3a)
+    # mf = ModelFree()
+    # num_iter = 20
+    # alpha = .5
+    # epsilon = .01
+    # num_actions_agg, _, _ = mf.q_learning(alpha=alpha, gamma=.9, epsilon=epsilon, episodes=170)
+    # for _ in range(num_iter-1):
+    #     num_actions, _, _ = mf.q_learning(alpha=alpha, gamma=.9, epsilon=epsilon, episodes=170)
+    #     num_actions_agg = [sum(x) for x in zip(num_actions, num_actions_agg)]
+    # num_actions_agg = [x / num_iter for x in num_actions_agg]
+
+    # # Learning Curve
+    # # Number of ticks you want to display
+    # num_ticks = 10
+    # # Generate linearly spaced x-ticks
+    # min_val = min(num_actions_agg)
+    # max_val = max(num_actions_agg)
+    # linear_ticks = np.linspace(min_val, max_val, num_ticks)
+
+    # plt.figure(figsize=(8, 4))
+    # plt.plot(num_actions_agg, range(len(num_actions_agg)), marker='.')  # Plotting index vs elements
+    # plt.xlabel('Time steps')
+    # plt.ylabel('Episodes')
+    # plt.xticks(range(0, int(max(num_actions_agg)) + 1000, 1000))
+    # plt.grid(True)
+    # plt.show()
+
+    # Q-Learning Q3b) and 3c)
+    # mf = ModelFree()
+    # # Get optimal value function for error logs
+    # _, optimal_value_grid = mf.value_iter()
+    # num_iter = 20
+    # alpha = .5
+    # epsilon = .01
+    # agg_value_grid = [[0 for _ in range(5)] for _ in range(5)]
+    # _, mean_sqr_error_agg, value_grid = mf.q_learning(alpha=alpha, gamma=.9, epsilon=epsilon, episodes=170, optimal_value_grid=optimal_value_grid)
+    # for state in mf.possible_states:
+    #     agg_value_grid[state[0]][state[1]] += value_grid[state[0]][state[1]]
+    # for _ in range(num_iter-1):
+    #     _, mean_sqr_error, value_grid = mf.q_learning(alpha=alpha, gamma=.9, epsilon=epsilon, episodes=170, optimal_value_grid=optimal_value_grid)
+    #     mean_sqr_error_agg = [sum(x) for x in zip(mean_sqr_error, mean_sqr_error_agg)]
+    #     for state in mf.possible_states:
+    #         agg_value_grid[state[0]][state[1]] += value_grid[state[0]][state[1]]
+
+    # for state in mf.possible_states:
+    #     agg_value_grid[state[0]][state[1]] /= num_iter
+    # # Generate the policy from the avergaged value function derived from the Q-values
+    # policy = {}
+    # for state in mf.possible_states:
+    #     policy[state] = mf.argmax_action(state)
+
+    # mf.visualize_policy(policy)
+    # mean_sqr_error_agg = [x / num_iter for x in mean_sqr_error_agg]
+
+    # # Learning Curve
+    # # Number of ticks you want to display
+    # num_ticks = 10
+    # # Generate linearly spaced x-ticks
+    # min_val = min(mean_sqr_error_agg)
+    # max_val = max(mean_sqr_error_agg)
+    # linear_ticks = np.linspace(min_val, max_val, num_ticks)
+
+    # plt.figure(figsize=(8, 4))
+    # plt.plot(range(len(mean_sqr_error_agg)), mean_sqr_error_agg, marker='.')  # Plotting index vs elements
+    # plt.xlabel('Episodes')
+    # plt.ylabel('Mean Squared-Error')
+    # plt.yticks(range(0, int(max(mean_sqr_error_agg)), 2))
+    # plt.grid(True)
+    # plt.show()
     
